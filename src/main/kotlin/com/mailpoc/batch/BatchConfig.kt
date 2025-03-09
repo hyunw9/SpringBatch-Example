@@ -15,9 +15,9 @@ class BatchConfig {
     @Bean
     fun batchTaskExecutor() : TaskExecutor {
         val executor : ThreadPoolTaskExecutor = ThreadPoolTaskExecutor ().apply{
-            corePoolSize = 10
-            maxPoolSize = 10
-            queueCapacity = 10
+            corePoolSize = Runtime.getRuntime().availableProcessors() * 2 // CPU 코어 기반 설정
+            maxPoolSize = Runtime.getRuntime().availableProcessors() * 4 // 확장 가능한 스레드 풀
+            queueCapacity = 50 // 큐 크기 (처리량에 따라 조정)
             setThreadNamePrefix("batch-thread-")
             initialize()
         }

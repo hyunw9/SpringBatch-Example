@@ -1,5 +1,5 @@
 ### GET request to example server
 
 ### RUN BATCH
-GET http://localhost:8080/batch
+GET http://localhost:8080/batch/{{status}}/{{toChange}}
 

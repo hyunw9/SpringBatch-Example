@@ -14,6 +14,7 @@ import org.springframework.batch.item.ItemProcessor
 import org.springframework.batch.item.ItemReader
 import org.springframework.batch.item.ItemWriter
 import org.springframework.batch.item.database.JdbcCursorItemReader
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.data.jpa.domain.AbstractPersistable_.id
 import org.springframework.jdbc.core.BeanPropertyRowMapper
@@ -33,7 +34,7 @@ class BatchJobManager (
     @Bean
     fun firstJob(
         jobRepository : JobRepository,
-        sampleStep : Step
+        sampleStep : Step,
     ) : Job {
         return JobBuilder("firstJob", jobRepository)
             .start(sampleStep)
@@ -49,29 +50,23 @@ class BatchJobManager (
         itemProcessor: ItemProcessor<User, User>
     ): Step {
         return StepBuilder("sampleStep", jobRepository)
-            .chunk<User, User>(10,transactionManager)
+            .chunk<User, User>(100,transactionManager)
             .reader(itemReader)
             .processor(itemProcessor)
             .writer(itemWriter)
             .build()
     }
 
-    @Bean
-    fun simpleTasklet() : Tasklet {
-        return Tasklet { _, _ ->
-            println("Hello, World!")
-            null
-        }
-    }
-
+    @JobScope
     @Bean
     fun itemReader(
-        dataSource: DataSource
+        dataSource: DataSource,
+        @Value("#{jobParameters['status']}") status : String
     ) : JdbcCursorItemReader<User> {
         return JdbcCursorItemReader<User>().apply {
             setDataSource(dataSource)
-            sql = "SELECT * FROM user WHERE status = 'PENDING'"
-            setFetchSize(10) // 성능 최적화 (10개씩 읽기)
+            sql = "SELECT * FROM user WHERE status = '$status'"
+            setFetchSize(100) // 성능 최적화 (10개씩 읽기)
             setRowMapper { rs, _ ->
                 User(
                     id = rs.getLong("id"),
@@ -85,9 +80,12 @@ class BatchJobManager (
     }
 
     @Bean
-    fun itemProcessor() : ItemProcessor<User, User>{
+    @JobScope
+    fun itemProcessor(
+        @Value ("#{jobParameters['toChange']}") toChange: String
+    ) : ItemProcessor<User, User>{
         return ItemProcessor { user ->
-            user.copy(status = "COMPLETE")
+            user.copy(status = toChange)
         }
     }
 
